@@ -30,7 +30,7 @@ jobs:
       run: docker push ${{ secrets.DOCKER_USERNAME }}/php-app:latest
 
     - name: Deploy on EC2
-      uses: appleboy/ssh-action@0.1.7
+      uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
