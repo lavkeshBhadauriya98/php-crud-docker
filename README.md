@@ -7,3 +7,4 @@ Blog Article: [Very simple add, edit, delete, view in PHP & MySQL](http://blog.c
 
 SQL script to create database and tables is present in **database.sql** file.
 hi i  am making commit now to trigger file
+hi the github actions is pipeline is running fine
