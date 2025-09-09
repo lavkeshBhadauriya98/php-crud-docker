@@ -10,9 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout repo
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 2. Configure AWS credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -20,10 +22,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      # 3. Login to ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # 4. Build and Push Docker image
       - name: Build, Tag, and Push Docker image to ECR
         run: |
           ECR_REPOSITORY=php-crud-app
@@ -36,12 +40,14 @@ jobs:
           echo "Pushing Docker image to ECR..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+      # 5. Deploy on EC2
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          host: ${{ secrets.EC2_HOST }}            # e.g. 51.20.10.14
+          username: ubuntu                         # तुम्हारा AMI ubuntu है
+          key: ${{ secrets.EC2_SSH_KEY }}          # assignment_php.pem का content
+          port: 22
           script: |
             ECR_REPOSITORY=php-crud-app
             ECR_REGISTRY=170974506713.dkr.ecr.eu-north-1.amazonaws.com
