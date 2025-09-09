@@ -10,11 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repo
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Configure AWS credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -22,48 +20,47 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 3. Login to ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 4. Build and Push Docker image
       - name: Build, Tag, and Push Docker image to ECR
         run: |
           ECR_REPOSITORY=php-crud-app
           ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG=latest
 
-          echo "Building Docker image..."
           docker buildx build --platform linux/amd64 --load -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-
-          echo "Pushing Docker image to ECR..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # 5. Deploy on EC2
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}            # e.g. 51.20.10.14
-          username: ubuntu                         # तुम्हारा AMI ubuntu है
-          key: ${{ secrets.EC2_SSH_KEY }}          # assignment_php.pem का content
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
+            # Install dependencies if not already installed
+            sudo apt update -y
+            sudo apt install -y unzip docker.io
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+            rm -rf awscliv2.zip aws
+
+            # Deploy Docker container
             ECR_REPOSITORY=php-crud-app
             ECR_REGISTRY=170974506713.dkr.ecr.eu-north-1.amazonaws.com
             IMAGE_TAG=latest
 
-            echo "Logging into ECR inside EC2..."
             aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
 
-            echo "Stopping old container..."
             docker stop php-app || true
             docker rm php-app || true
 
-            echo "Pulling latest image..."
             docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-            echo "Running new container..."
             docker run -d -p 80:80 --name php-app \
               -e DB_HOST=${{ secrets.DB_HOST }} \
               -e DB_USER=${{ secrets.DB_USER }} \
